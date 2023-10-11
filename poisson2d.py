@@ -2,6 +2,7 @@ import numpy as np
 import sympy as sp
 import scipy.sparse as sparse
 
+
 x, y = sp.symbols('x,y')
 
 class Poisson2D:
@@ -33,28 +34,56 @@ class Poisson2D:
     def create_mesh(self, N):
         """Create 2D mesh and store in self.xij and self.yij"""
         # self.xij, self.yij ...
-        raise NotImplementedError
+        self.N = N
+        self.h = self.L/self.N
+        x = np.linspace(0, self.L, self.N+1)
+        y = np.linspace(0, self.L, self.N+1)
+        self.xij, self.yij = np.meshgrid(x,y, indexing='ij')
+        return x,y
 
     def D2(self):
         """Return second order differentiation matrix"""
-        raise NotImplementedError
+        D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N+1, self. N+1), 'lil')
+        D[0,:4] = 2, -5, 4, -1 
+        D[-1, -4:] = -1, 4, -5, 2
+        return D
 
     def laplace(self):
         """Return vectorized Laplace operator"""
-        raise NotImplementedError
+        D2 = (1./self.h**2)*self.D2()
+        vecLap = (sparse.kron(D2, sparse.eye(self.N+1))+sparse.kron(sparse.eye(self.N+1), D2))
+        return vecLap
 
     def get_boundary_indices(self):
         """Return indices of vectorized matrix that belongs to the boundary"""
-        raise NotImplementedError
+        B = np.ones((self.N+1, self.N+1), dtype=bool)
+        B[1:-1, 1:-1] = 0 
+        bnds = np.where(B.ravel() ==1)[0]
+        return bnds
+
 
     def assemble(self):
-        """Return assembled matrix A and right hand side vector b"""
+        """Return assembled matrix A and right hand side vector b""" 
+        #here we have to implement the boundary conditions, but these are not zero as in the lecture, we have to something different for the assamblence of A.
         # return A, b
-        raise NotImplementedError
+        F = sp.lambdify((x,y), self.f)(self.xij, self.yij)
+        A = self.laplace()
+        A = A.tolil()
+        bnds = self.get_boundary_indices()
+        for i in bnds: 
+            A[i]= 0 
+            A[i,i] = 1 
+        A = A.tocsr()    
+        b = F.ravel()
+        ue_func = sp.lambdify((x,y), self.ue)(self.xij, self.yij)
+        b[bnds] = ue_func.ravel()[bnds]
+        return A, b
+
 
     def l2_error(self, u):
         """Return l2-error norm"""
-        raise NotImplementedError
+        uj = sp.lambdify([x,y], self.ue )(self.xij, self.yij)
+        return np.sqrt(self.h**2*np.sum((uj-u)**2))
 
     def __call__(self, N):
         """Solve Poisson's equation.
@@ -71,7 +100,7 @@ class Poisson2D:
         """
         self.create_mesh(N)
         A, b = self.assemble()
-        self.U = sparse.linalg.spsolve(A, b.flatten()).reshape((N+1, N+1))
+        U = self.U = sparse.linalg.spsolve(A, b.flatten()).reshape((N+1, N+1))
         return self.U
 
     def convergence_rates(self, m=6):
@@ -99,8 +128,50 @@ class Poisson2D:
             N0 *= 2
         r = [np.log(E[i-1]/E[i])/np.log(h[i-1]/h[i]) for i in range(1, m+1, 1)]
         return r, np.array(E), np.array(h)
+    
+    #def Lagrangebasis(self, xj, x=x):
+    #    """ Construct Lagrange basis function for points in xj
+#
+ #       Parameters 
+  #      ----------
+   #     xj: array 
+    #        Interpolation points
+    #    x: Sympy Symbol
+#
+ #       Returns
+  #      -------
+   #     Lagrange basis functions
+    #    """
+     #   n = len(xj)
+      #  ell = []
+#        numert = sp.Mul(*[x-xj[i] for i in range(n)])
+ #       
+  #      for i in range(n):
+   #         numer = numert/(x-xj[i])
+    #        denom = sp.Mul(*[(xj[i]-xj[j]) for j in range(n) if i != j])
+     #       ell.append(numer/denom)
+      #  return ell 
+    
+   # def Lagrangefunction2D(self, u, basisx, basisy):
+   #     """ Return Lagrange polynomial in 2D
 
-    def eval(self, x, y):
+    #    Parameters 
+    #    ----------
+    #    u : array
+    #        Mesh function values
+    #3    basisx : tuple of Lagrange basis functions 
+    #3       Output from Lagrangebasis
+     #   basisy : the same as basisx
+
+    #    """
+    #    N, M = u.shape
+     #   f =  0
+     #   for i in range(N):
+     #       for j in range(M):
+     #           f += basisx[i]* basisy[j] * u[i, j] 
+     #   return f
+
+    def eval(self, x_val, y_val):
         """Return u(x, y)
 
         Parameters
@@ -113,7 +184,10 @@ class Poisson2D:
         The value of u(x, y)
 
         """
-        raise NotImplementedError
+        x_index = np.argmin(np.abs(self.x - x_val))
+        y_index = np.argmin(np.abs(self.y - y_val))
+        u_value = self.U[x_index, y_index]
+        return u_value
 
 def test_convergence_poisson2d():
     # This exact solution is NOT zero on the entire boundary
@@ -129,3 +203,11 @@ def test_interpolation():
     assert abs(sol.eval(0.52, 0.63) - ue.subs({x: 0.52, y: 0.63}).n()) < 1e-3
     assert abs(sol.eval(sol.h/2, 1-sol.h/2) - ue.subs({x: sol.h, y: 1-sol.h/2}).n()) < 1e-3
 
+#if __name__ == '__main__':
+#    ue = sp.exp(sp.cos(4*sp.pi*x)*sp.sin(2*sp.pi*y))
+#    sol = Poisson2D(1, ue)
+#    N =100 
+#    U = sol(N)
+
+    #test_convergence_poisson2d()
+    #test_interpolation()
