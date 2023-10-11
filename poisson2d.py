@@ -1,6 +1,7 @@
 import numpy as np
 import sympy as sp
 import scipy.sparse as sparse
+import scipy
 
 
 x, y = sp.symbols('x,y')
@@ -128,50 +129,8 @@ class Poisson2D:
             N0 *= 2
         r = [np.log(E[i-1]/E[i])/np.log(h[i-1]/h[i]) for i in range(1, m+1, 1)]
         return r, np.array(E), np.array(h)
-    
-    #def Lagrangebasis(self, xj, x=x):
-    #    """ Construct Lagrange basis function for points in xj
-#
- #       Parameters 
-  #      ----------
-   #     xj: array 
-    #        Interpolation points
-    #    x: Sympy Symbol
-#
- #       Returns
-  #      -------
-   #     Lagrange basis functions
-    #    """
-     #   n = len(xj)
-      #  ell = []
-#        numert = sp.Mul(*[x-xj[i] for i in range(n)])
- #       
-  #      for i in range(n):
-   #         numer = numert/(x-xj[i])
-    #        denom = sp.Mul(*[(xj[i]-xj[j]) for j in range(n) if i != j])
-     #       ell.append(numer/denom)
-      #  return ell 
-    
-   # def Lagrangefunction2D(self, u, basisx, basisy):
-   #     """ Return Lagrange polynomial in 2D
 
-    #    Parameters 
-    #    ----------
-    #    u : array
-    #        Mesh function values
-    #3    basisx : tuple of Lagrange basis functions 
-    #3       Output from Lagrangebasis
-     #   basisy : the same as basisx
-
-    #    """
-    #    N, M = u.shape
-     #   f =  0
-     #   for i in range(N):
-     #       for j in range(M):
-     #           f += basisx[i]* basisy[j] * u[i, j] 
-     #   return f
-
-    def eval(self, x_val, y_val):
+    def eval(self, x, y):
         """Return u(x, y)
 
         Parameters
@@ -184,10 +143,10 @@ class Poisson2D:
         The value of u(x, y)
 
         """
-        x_index = np.argmin(np.abs(self.x - x_val))
-        y_index = np.argmin(np.abs(self.y - y_val))
-        u_value = self.U[x_index, y_index]
-        return u_value
+        interpol_func = scipy.interpolate.RegularGridInterpolator((self.xij[:,0], self.yij[0,:]), self.U)
+        return interpol_func(np.array([[x,y]]))[0]
+
+        
 
 def test_convergence_poisson2d():
     # This exact solution is NOT zero on the entire boundary
@@ -203,11 +162,5 @@ def test_interpolation():
     assert abs(sol.eval(0.52, 0.63) - ue.subs({x: 0.52, y: 0.63}).n()) < 1e-3
     assert abs(sol.eval(sol.h/2, 1-sol.h/2) - ue.subs({x: sol.h, y: 1-sol.h/2}).n()) < 1e-3
 
-#if __name__ == '__main__':
-#    ue = sp.exp(sp.cos(4*sp.pi*x)*sp.sin(2*sp.pi*y))
-#    sol = Poisson2D(1, ue)
-#    N =100 
-#    U = sol(N)
-
-    #test_convergence_poisson2d()
-    #test_interpolation()
+test_convergence_poisson2d()
+test_interpolation()
