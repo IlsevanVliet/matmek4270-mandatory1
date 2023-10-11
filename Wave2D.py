@@ -188,7 +188,7 @@ def animation(self, data):
         frame = ax.plot_wideframe(xij, yij, val, rstride =2, cstride = 2)
         frames.append([frame])
     ani = animation.ArtistAnimation(fig, frames, interval=400, blit=True, repeat_delay=1000)
-    ani.save('wavemovie2d.apng', writer='pillow', fps = 5)
+    ani.save('./report/wave2D_Neumann.gif', writer='pillow', fps = 5)
 
 def test_convergence_wave2d():
     sol = Wave2D()
@@ -224,4 +224,5 @@ if __name__ == "__main__":
     abs(errorD[-1])<1e-12
     abs(errorH[-1])<1e-12
 
+    #animation()
     
