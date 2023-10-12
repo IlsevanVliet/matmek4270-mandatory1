@@ -179,13 +179,13 @@ class Wave2D_Neumann(Wave2D):
     def apply_bcs(self, u= None):
         pass
 
-def animation(self, data):
+def animationN():
     solN = Wave2D_Neumann()
-    xij, yij, data = solN(N=40, Nt=501, cfl = 1/np.sqrt(2), mx=2, my =3, storedata = 5)
+    xij, yij, data = solN(N=40, Nt=501, cfl = 1/np.sqrt(2), mx=2, my =3, store_data = 5)
     fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     frames = []
     for n, val in data.items():
-        frame = ax.plot_wideframe(xij, yij, val, rstride =2, cstride = 2)
+        frame = ax.plot_wireframe(xij, yij, val, rstride =2, cstride = 2)
         frames.append([frame])
     ani = animation.ArtistAnimation(fig, frames, interval=400, blit=True, repeat_delay=1000)
     ani.save('./report/wave2D_Neumann.gif', writer='pillow', fps = 5)
@@ -209,20 +209,20 @@ def test_exact_wave2d():
     assert abs(errorH[-1])<1e-12
 
 if __name__ == "__main__":
-    sol = Wave2D()
-    r, E, h = sol.convergence_rates(mx=2, my=3)
-    abs(r[-1]-2) < 1e-2
+    #sol = Wave2D()
+    #r, E, h = sol.convergence_rates(mx=2, my=3)
+    #abs(r[-1]-2) < 1e-2
 
-    solN = Wave2D_Neumann()
-    r, E, h = solN.convergence_rates(mx=2, my=3)
-    abs(r[-1]-2) < 0.05
+    #solN = Wave2D_Neumann()
+    #r, E, h = solN.convergence_rates(mx=2, my=3)
+    #abs(r[-1]-2) < 0.05
 
-    solD = Wave2D()
-    solN = Wave2D_Neumann()
-    hD, errorD = solD(N=10, Nt=10, cfl = 1/np.sqrt(2))
-    hH, errorH = solN(N=10, Nt=10, cfl = 1/np.sqrt(2))
-    abs(errorD[-1])<1e-12
-    abs(errorH[-1])<1e-12
+    #solD = Wave2D()
+    #solN = Wave2D_Neumann()
+    #hD, errorD = solD(N=10, Nt=10, cfl = 1/np.sqrt(2))
+    #hH, errorH = solN(N=10, Nt=10, cfl = 1/np.sqrt(2))
+    #abs(errorD[-1])<1e-12
+    #abs(errorH[-1])<1e-12
 
-    #animation()
+    animationN()
     
